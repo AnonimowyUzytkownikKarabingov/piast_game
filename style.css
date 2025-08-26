@@ -1,0 +1,143 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background: black;
+  color: white;
+  font-family: Arial, sans-serif;
+  display: flex;
+  justify-content: center;
+  padding: 20px;
+}
+
+.container {
+  text-align: center;
+  user-select: none;
+}
+
+.controls {
+  margin-bottom: 10px;
+}
+
+button {
+  font-size: 16px;
+  padding: 8px 16px;
+  margin-right: 10px;
+  cursor: pointer;
+  border: none;
+  border-radius: 4px;
+  background: #007bff;
+  color: white;
+  transition: background 0.3s;
+}
+
+button:hover {
+  background: #0056b3;
+}
+
+#score {
+  display: inline-block;
+  margin-left: 20px;
+  font-weight: bold;
+  font-size: 18px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(28, 40px);
+  grid-template-rows: repeat(25, 40px);
+  gap: 2px;
+  margin: 0 auto;
+  background: #222;
+  width: max-content;
+  border: 3px solid #555;
+  border-radius: 6px;
+}
+
+/* Squares */
+.grid div {
+  width: 40px;
+  height: 40px;
+  background: black;
+  position: relative;
+}
+
+/* Walls */
+.wall {
+  background: blue !important;;
+  border-radius: 0;
+}
+
+/* Pac-Dots */
+.pac-dot {
+    background-image: url("smakosz.png") !important;
+  background-size: cover !important;
+  margin: auto;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+}
+
+/* Special Dots */
+.special-dot {
+  background-image: url("kustosz.png") !important;
+  background-size: cover !important;
+  margin: auto;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+}
+
+/* Pacman */
+.pacman {
+  background-image: url("behelit.png") !important;
+  background-size: cover !important;
+  margin: auto;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+
+}
+
+/* Ghost base */
+.ghost {
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  margin: 2px;
+  position: relative;
+  z-index: 2;
+  /* Give ghosts a subtle shadow */
+  box-shadow: 0 0 10px 3px currentColor;
+}
+
+/* Ghost colors: use currentColor for flexibility */
+.ghost-0 { 
+      background-image: url("oski1.png") !important;
+  background-size: cover !important;
+  margin: auto;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+}   
+.ghost-1 { background-image: url("oski2.png") !important;
+  background-size: cover !important;
+  margin: auto;
+  background-repeat: no-repeat !important;
+  background-position: center !important;}   /* pink */
+.ghost-2 { background-image: url("oski3.png") !important;
+  background-size: cover !important;
+  margin: auto;
+  background-repeat: no-repeat !important;
+  background-position: center !important;}   /* cyan */
+.ghost-3 { background-image: url("oski4.png") !important;
+  background-size: cover !important;
+  margin: auto;
+  background-repeat: no-repeat !important;
+  background-position: center !important;}   /* orange */
+.ghost-4 { background: #800080 !important; }   /* purple */
+.ghost-5 { background: #008000 !important; }   /* green */
+.ghost-6 { background: #FF00FF !important; }   /* magenta */
+.ghost-7 { background: #FFD700 !important; }   /* gold */
+
+/* Make ghosts' background same as their color */
+.ghost {
+  background-color: currentColor;
+}
