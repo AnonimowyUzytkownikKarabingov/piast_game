@@ -136,7 +136,7 @@ function startGame() {
   gameRunning = true;
   canMove = true;
   score = 0;
-  scoreDisplay.textContent = `Score: ${score}`;
+  scoreDisplay.textContent = `Smak: ${score}`;
 
   createBoard();
   placePacman();
@@ -243,7 +243,7 @@ function handleKeydown(e) {
     squares[pacmanIndex].classList.remove('pac-dot');
   }
 
-  scoreDisplay.textContent = `Score: ${score}`;
+  scoreDisplay.textContent = `Smak: ${score}`;
 
   if (squares[pacmanIndex].classList.contains('ghost')) {
     endGame();
