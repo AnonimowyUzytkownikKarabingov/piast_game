@@ -2,6 +2,8 @@ const grid = document.querySelector('.grid');
 const scoreDisplay = document.getElementById('score');
 const startButton = document.getElementById('start-button');
 const restartButton = document.getElementById('restart-button');
+const congratsMessage = document.getElementById('congrats-message');
+const goAgainBtn = document.getElementById('go-again-btn');
 
 const width = 28;
 const height = 25;
@@ -160,6 +162,7 @@ function restartGame() {
   if (gameRunning) {
     endGame(false);
   }
+  congratsMessage.style.display = 'none';  // hide message on restart
   startGame();
 }
 
@@ -174,6 +177,21 @@ function endGame(showAlert = true) {
     alert(`Ajjj Ewa niepocieszona, nie zjadles calej sraki! Zjedzona sraka: ${score}`);
   }
 }
+
+function pauseGameForWin() {
+  gameRunning = false;
+  ghostTimers.forEach(timer => clearInterval(timer));
+  ghostTimers = [];
+  document.removeEventListener('keydown', handleKeydown);
+  document.removeEventListener('keyup', handleKeyup);
+
+  congratsMessage.style.display = 'block';
+}
+
+goAgainBtn.addEventListener('click', () => {
+  congratsMessage.style.display = 'none';
+  restartGame();
+});
 
 function handleKeydown(e) {
   if (!gameRunning || !canMove || pressedKeys.has(e.key)) return;
@@ -244,6 +262,11 @@ function handleKeydown(e) {
   }
 
   scoreDisplay.textContent = `Smak: ${score}`;
+
+  if (score >= 550) {
+    pauseGameForWin();
+    return;
+  }
 
   if (squares[pacmanIndex].classList.contains('ghost')) {
     endGame();
