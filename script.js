@@ -20,6 +20,10 @@ let ghostTimers = [];
 
 const pressedKeys = new Set();
 
+// === Sound Setup ===
+const startSound = new Audio('sounds/startsound.mp3');
+const winSound = new Audio('sounds/win.mp3');
+
 function generateLayout() {
   const layout = [];
   for (let r = 0; r < height; r++) {
@@ -135,6 +139,8 @@ let ghostStartPositions = [
 function startGame() {
   if (gameRunning) return;
 
+  startSound.play(); // ▶️ Play start sound
+
   gameRunning = true;
   canMove = true;
   score = 0;
@@ -162,7 +168,10 @@ function restartGame() {
   if (gameRunning) {
     endGame(false);
   }
-  congratsMessage.style.display = 'none';  // hide message on restart
+
+  startSound.play(); // ▶️ Play start sound
+
+  congratsMessage.style.display = 'none';
   startGame();
 }
 
@@ -179,6 +188,8 @@ function endGame(showAlert = true) {
 }
 
 function pauseGameForWin() {
+  winSound.play(); // ▶️ Play win sound
+
   gameRunning = false;
   ghostTimers.forEach(timer => clearInterval(timer));
   ghostTimers = [];
