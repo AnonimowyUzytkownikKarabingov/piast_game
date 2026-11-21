@@ -36,11 +36,37 @@ button:hover {
   background: #0056b3;
 }
 
-#score {
+.modes {
+  margin-bottom: 10px;
+}
+
+.modes button.active {
+  background: #c00000;
+}
+
+#score, #time {
   display: inline-block;
   margin-left: 20px;
   font-weight: bold;
   font-size: 18px;
+}
+
+/* Napis po zjedzeniu piwa / klamki - stała wysokość, żeby plansza nie skakała */
+#pickup-message {
+  height: 32px;
+  line-height: 32px;
+  margin-bottom: 10px;
+  font-weight: bold;
+  font-size: 22px;
+  color: red;
+}
+
+#pickup-message.blink {
+  animation: blink 0.25s step-start infinite;
+}
+
+@keyframes blink {
+  50% { visibility: hidden; }
 }
 
 .grid {
@@ -85,6 +111,35 @@ button:hover {
   margin: auto;
   background-repeat: no-repeat !important;
   background-position: center !important;
+}
+
+/* Klamka */
+.klamka {
+  background-image: url("klamka.jpg") !important;
+  background-size: cover !important;
+  margin: auto;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+}
+
+/* Kafelek MAMO POMOCY (DLC) */
+.mamo-pomocy {
+  background: black !important;
+}
+
+.mamo-pomocy::after {
+  content: "MAMO\APOMOCY";
+  white-space: pre;
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  line-height: 1.1;
+  font-size: 9px;
+  font-weight: bold;
+  color: red;
 }
 
 /* Pacman */
@@ -140,4 +195,12 @@ button:hover {
 /* Make ghosts' background same as their color */
 .ghost {
   background-color: currentColor;
+}
+
+/* Kulosik (DLC) */
+.kulosik {
+  background-image: url("coolos.png") !important;
+  background-size: cover !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
 }

@@ -4,10 +4,37 @@ const startButton = document.getElementById('start-button');
 const restartButton = document.getElementById('restart-button');
 const congratsMessage = document.getElementById('congrats-message');
 const goAgainBtn = document.getElementById('go-again-btn');
+const pickupMessage = document.getElementById('pickup-message');
+const timeDisplay = document.getElementById('time');
+const vanillaButton = document.getElementById('vanilla-button');
+const dlcButton = document.getElementById('dlc-button');
 
 const width = 28;
 const height = 25;
 const totalSquares = width * height;
+
+// === Tryby gry ===
+// 'vanilla' - gra sprzed DLC, 'dlc' - Odyseja Piastowska (klamka, kulosik)
+let mode = 'vanilla';
+const restartLabels = {
+  vanilla: 'Nasraj na nowo',
+  dlc: 'Ewka zrób misraki',
+};
+
+const specialDotPoints = 2;
+
+// === DLC ===
+const klamkaPoints = 10;
+const klamkaMaxPickups = 3;
+const klamkaVisibleMin = 10000;
+const klamkaVisibleMax = 15000;
+const klamkaHiddenTime = 5000;
+
+const kulosikPoints = 20;
+const kulosikDelayMin = 35000; // 30 s gry + 5..15 s
+const kulosikDelayMax = 45000;
+const kulosikStepTime = 450;
+const kulosikMinSpawnDistance = 12;
 
 let squares = [];
 let pacmanIndex = 0;
@@ -17,12 +44,23 @@ let canMove = true;
 
 let ghosts = [];
 let ghostTimers = [];
+let dlcTimers = [];
+let pickupMessageTimer = null;
+let gameStartTime = 0;
+let gameClockTimer = null;
+
+let klamkaIndex = -1;
+let klamkaPickups = 0;
+let klamkaHideTimer = null;
+let kulosik = null;
+let mamoIndex = -1;
 
 const pressedKeys = new Set();
 
 // === Sound Setup ===
 const startSound = new Audio('sounds/startsound.mp3');
 const winSound = new Audio('sounds/win.mp3');
+const kulosikCatchSound = new Audio('sounds/kulosik.mp3');
 
 function generateLayout() {
   const layout = [];
@@ -83,6 +121,28 @@ function placePacman() {
   squares[pacmanIndex].classList.add('pacman');
 }
 
+function dotsLeft() {
+  return squares.some(sq =>
+    sq.classList.contains('pac-dot') || sq.classList.contains('special-dot')
+  );
+}
+
+function showPickupMessage(text) {
+  clearTimeout(pickupMessageTimer);
+  pickupMessage.textContent = text;
+  pickupMessage.classList.add('blink');
+  pickupMessageTimer = setTimeout(() => {
+    pickupMessage.textContent = '';
+    pickupMessage.classList.remove('blink');
+  }, 2000);
+}
+
+function clearPickupMessage() {
+  clearTimeout(pickupMessageTimer);
+  pickupMessage.textContent = '';
+  pickupMessage.classList.remove('blink');
+}
+
 class Ghost {
   constructor(startIndex, className) {
     this.currentIndex = startIndex;
@@ -136,6 +196,196 @@ let ghostStartPositions = [
   width * 18 + 19,
 ];
 
+// === DLC: pomocnicze ===
+function randomBetween(min, max) {
+  return min + Math.random() * (max - min);
+}
+
+// setTimeout, który odpala się tylko w trakcie gry i jest czyszczony w stopTimers()
+function later(fn, ms) {
+  const id = setTimeout(() => {
+    if (gameRunning) fn();
+  }, ms);
+  dlcTimers.push(id);
+  return id;
+}
+
+function neighbors(i) {
+  const result = [];
+  if (i % width !== 0) result.push(i - 1);
+  if (i % width < width - 1) result.push(i + 1);
+  if (i - width >= 0) result.push(i - width);
+  if (i + width < totalSquares) result.push(i + width);
+  return result;
+}
+
+// Odległości (w krokach) od pola start; isBlocked(i) - na pole i nie da się wejść
+function distancesFrom(start, isBlocked) {
+  const dist = new Array(totalSquares);
+  dist[start] = 0;
+  const queue = [start];
+  while (queue.length) {
+    const cur = queue.shift();
+    neighbors(cur).forEach(n => {
+      if (dist[n] !== undefined || isBlocked(n)) return;
+      dist[n] = dist[cur] + 1;
+      queue.push(n);
+    });
+  }
+  return dist;
+}
+
+function isFreeSquare(i) {
+  const sq = squares[i];
+  return (
+    i !== pacmanIndex &&
+    !sq.classList.contains('wall') &&
+    !sq.classList.contains('ghost') &&
+    !sq.classList.contains('klamka') &&
+    !sq.classList.contains('mamo-pomocy')
+  );
+}
+
+function randomFreeSquare(filter = () => true) {
+  const free = [];
+  for (let i = 0; i < totalSquares; i++) {
+    if (isFreeSquare(i) && filter(i)) free.push(i);
+  }
+  return free.length ? free[Math.floor(Math.random() * free.length)] : -1;
+}
+
+// === DLC: klamka ===
+// Leży na polu przez 10-15 s, znika na 5 s i wraca; można ją zebrać 3 razy na grę.
+// Kropka pod klamką zostaje i jest zjadana razem z klamką.
+function scheduleKlamka(delay) {
+  later(showKlamka, delay);
+}
+
+function showKlamka() {
+  klamkaIndex = randomFreeSquare();
+  if (klamkaIndex === -1) {
+    scheduleKlamka(klamkaHiddenTime);
+    return;
+  }
+  squares[klamkaIndex].classList.add('klamka');
+  klamkaHideTimer = later(hideKlamka, randomBetween(klamkaVisibleMin, klamkaVisibleMax));
+}
+
+function hideKlamka() {
+  squares[klamkaIndex].classList.remove('klamka');
+  klamkaIndex = -1;
+  scheduleKlamka(klamkaHiddenTime);
+}
+
+function pickUpKlamka() {
+  clearTimeout(klamkaHideTimer);
+  squares[klamkaIndex].classList.remove('klamka', 'pac-dot', 'special-dot');
+  klamkaIndex = -1;
+  klamkaPickups++;
+  score += klamkaPoints;
+  showPickupMessage(`Klamka ojebana!!! +${klamkaPoints}`);
+  if (klamkaPickups < klamkaMaxPickups) {
+    scheduleKlamka(klamkaHiddenTime);
+  }
+}
+
+// === DLC: kulosik ===
+// Pojawia się raz na grę, 35-45 s po starcie, daleko od gracza, i go goni.
+// Razem z nim pojawia się kafelek MAMO POMOCY, który go usuwa.
+function isBlockedForKulosik(i) {
+  const sq = squares[i];
+  return sq.classList.contains('wall') ||
+    (sq.classList.contains('ghost') && i !== kulosik.index);
+}
+
+function spawnKulosik() {
+  const dist = distancesFrom(pacmanIndex, i => squares[i].classList.contains('wall'));
+  let index = randomFreeSquare(i => dist[i] >= kulosikMinSpawnDistance);
+  if (index === -1) index = randomFreeSquare();
+  if (index === -1) return;
+
+  kulosik = { index, timer: null };
+  squares[index].classList.add('ghost', 'kulosik');
+  kulosik.timer = setInterval(moveKulosik, kulosikStepTime);
+  ghostTimers.push(kulosik.timer);
+
+  mamoIndex = randomFreeSquare();
+  if (mamoIndex !== -1) {
+    squares[mamoIndex].classList.add('mamo-pomocy');
+  }
+}
+
+function moveKulosik() {
+  if (!gameRunning || !kulosik) return;
+
+  const dist = distancesFrom(pacmanIndex, isBlockedForKulosik);
+  let next = -1;
+  neighbors(kulosik.index).forEach(n => {
+    if (dist[n] === undefined) return;
+    if (next === -1 || dist[n] < dist[next]) next = n;
+  });
+  if (next === -1) return;
+
+  if (next === pacmanIndex) {
+    endGame(true, true);
+    return;
+  }
+
+  squares[kulosik.index].classList.remove('ghost', 'kulosik');
+  kulosik.index = next;
+  squares[kulosik.index].classList.add('ghost', 'kulosik');
+}
+
+function pickUpMamo() {
+  squares[mamoIndex].classList.remove('mamo-pomocy', 'pac-dot', 'special-dot');
+  mamoIndex = -1;
+  if (kulosik) {
+    clearInterval(kulosik.timer);
+    squares[kulosik.index].classList.remove('ghost', 'kulosik');
+    kulosik = null;
+  }
+  score += kulosikPoints;
+  showPickupMessage(`Kulosik przecwelony przez bagiety +${kulosikPoints}`);
+}
+
+function startDlc() {
+  klamkaIndex = -1;
+  klamkaPickups = 0;
+  kulosik = null;
+  mamoIndex = -1;
+  scheduleKlamka(klamkaHiddenTime);
+  later(spawnKulosik, randomBetween(kulosikDelayMin, kulosikDelayMax));
+}
+
+function stopTimers() {
+  ghostTimers.forEach(timer => clearInterval(timer));
+  ghostTimers = [];
+  dlcTimers.forEach(timer => clearTimeout(timer));
+  dlcTimers = [];
+  clearInterval(gameClockTimer);
+}
+
+// === Czas gry ===
+function updateClock() {
+  const seconds = Math.floor((Date.now() - gameStartTime) / 1000);
+  const m = Math.floor(seconds / 60);
+  const s = String(seconds % 60).padStart(2, '0');
+  timeDisplay.textContent = `Czas: ${m}:${s}`;
+}
+
+function startClock() {
+  gameStartTime = Date.now();
+  updateClock();
+  gameClockTimer = setInterval(updateClock, 250);
+}
+
+function setMode(newMode) {
+  mode = newMode;
+  restartButton.textContent = restartLabels[mode];
+  vanillaButton.classList.toggle('active', mode === 'vanilla');
+  dlcButton.classList.toggle('active', mode === 'dlc');
+}
+
 function startGame() {
   if (gameRunning) return;
 
@@ -145,20 +395,26 @@ function startGame() {
   canMove = true;
   score = 0;
   scoreDisplay.textContent = `Smak: ${score}`;
+  clearPickupMessage();
 
   createBoard();
   placePacman();
 
   ghosts.forEach(g => squares[g.currentIndex].classList.remove('ghost', g.className));
   ghosts = [];
-  ghostTimers.forEach(timer => clearInterval(timer));
-  ghostTimers = [];
+  stopTimers();
 
   ghostStartPositions.forEach((pos, i) => {
     const ghost = new Ghost(pos, `ghost-${i}`);
     ghosts.push(ghost);
     ghost.move();
   });
+
+  if (mode === 'dlc') {
+    startDlc();
+  }
+
+  startClock();
 
   document.addEventListener('keydown', handleKeydown);
   document.addEventListener('keyup', handleKeyup);
@@ -175,14 +431,23 @@ function restartGame() {
   startGame();
 }
 
-function endGame(showAlert = true) {
+function endGame(showAlert = true, caughtByKulosik = false) {
   gameRunning = false;
-  ghostTimers.forEach(timer => clearInterval(timer));
-  ghostTimers = [];
+  stopTimers();
   document.removeEventListener('keydown', handleKeydown);
   document.removeEventListener('keyup', handleKeyup);
 
-  if (showAlert) {
+  if (!showAlert) return;
+
+  if (caughtByKulosik) {
+    // alert() wstrzymuje stronę, więc pokazujemy go dopiero, gdy dźwięk ruszy
+    // (albo od razu, jeśli pliku dźwięku jeszcze nie ma)
+    const finalScore = score;
+    kulosikCatchSound.currentTime = 0;
+    kulosikCatchSound.play()
+      .catch(() => {})
+      .finally(() => alert(`HIPIS KURWA PRZECWELONA\nZjedzona sraka: ${finalScore}`));
+  } else {
     alert(`Ajjj Ewa niepocieszona, nie zjadles calej sraki! Zjedzona sraka: ${score}`);
   }
 }
@@ -191,8 +456,7 @@ function pauseGameForWin() {
   winSound.play(); // ▶️ Play win sound
 
   gameRunning = false;
-  ghostTimers.forEach(timer => clearInterval(timer));
-  ghostTimers = [];
+  stopTimers();
   document.removeEventListener('keydown', handleKeydown);
   document.removeEventListener('keyup', handleKeyup);
 
@@ -256,7 +520,7 @@ function handleKeydown(e) {
   }
 
   if (squares[nextIndex].classList.contains('ghost')) {
-    endGame();
+    endGame(true, squares[nextIndex].classList.contains('kulosik'));
     return;
   }
 
@@ -264,17 +528,26 @@ function handleKeydown(e) {
   pacmanIndex = nextIndex;
   squares[pacmanIndex].classList.add('pacman');
 
-  if (squares[pacmanIndex].classList.contains('special-dot')) {
-    score += 2;
-    squares[pacmanIndex].classList.remove('special-dot');
-  } else if (squares[pacmanIndex].classList.contains('pac-dot')) {
+  const square = squares[pacmanIndex];
+  if (square.classList.contains('klamka')) {
+    pickUpKlamka();
+  } else if (square.classList.contains('mamo-pomocy')) {
+    pickUpMamo();
+  } else if (square.classList.contains('special-dot')) {
+    score += specialDotPoints;
+    square.classList.remove('special-dot');
+    if (mode === 'dlc') {
+      showPickupMessage(`Gazowane szambo wypite! +${specialDotPoints}`);
+    }
+  } else if (square.classList.contains('pac-dot')) {
     score += 1;
-    squares[pacmanIndex].classList.remove('pac-dot');
+    square.classList.remove('pac-dot');
   }
 
   scoreDisplay.textContent = `Smak: ${score}`;
 
-  if (score >= 550) {
+  // Wygrana po zjedzeniu wszystkich kropek (w vanilli to dokładnie 550 pkt, jak wcześniej)
+  if (!dotsLeft()) {
     pauseGameForWin();
     return;
   }
@@ -294,3 +567,11 @@ function handleKeyup(e) {
 
 startButton.addEventListener('click', startGame);
 restartButton.addEventListener('click', restartGame);
+vanillaButton.addEventListener('click', () => {
+  setMode('vanilla');
+  restartGame();
+});
+dlcButton.addEventListener('click', () => {
+  setMode('dlc');
+  restartGame();
+});
