@@ -165,32 +165,28 @@ button:hover {
 }
 
 /* Ghost colors: use currentColor for flexibility */
-.ghost-0 { 
+.ghost-0, .ghost-4 {
       background-image: url("oski1.png") !important;
   background-size: cover !important;
   margin: auto;
   background-repeat: no-repeat !important;
   background-position: center !important;
 }   
-.ghost-1 { background-image: url("oski2.png") !important;
+.ghost-1, .ghost-5 { background-image: url("oski2.png") !important;
   background-size: cover !important;
   margin: auto;
   background-repeat: no-repeat !important;
   background-position: center !important;}   /* pink */
-.ghost-2 { background-image: url("oski3.png") !important;
+.ghost-2, .ghost-6 { background-image: url("oski3.png") !important;
   background-size: cover !important;
   margin: auto;
   background-repeat: no-repeat !important;
   background-position: center !important;}   /* cyan */
-.ghost-3 { background-image: url("oski4.png") !important;
+.ghost-3, .ghost-7 { background-image: url("oski4.png") !important;
   background-size: cover !important;
   margin: auto;
   background-repeat: no-repeat !important;
   background-position: center !important;}   /* orange */
-.ghost-4 { background: #800080 !important; }   /* purple */
-.ghost-5 { background: #008000 !important; }   /* green */
-.ghost-6 { background: #FF00FF !important; }   /* magenta */
-.ghost-7 { background: #FFD700 !important; }   /* gold */
 
 /* Make ghosts' background same as their color */
 .ghost {
