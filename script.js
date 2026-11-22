@@ -162,22 +162,23 @@ class Ghost {
 
       const nextIndex = this.currentIndex + direction;
 
+      // Duch łazi losowo jak wcześniej (nie goni gracza), ale wejście na pole gracza go zabija
+      if (nextIndex === pacmanIndex) {
+        endGame();
+        return;
+      }
+
       if (
         nextIndex >= 0 &&
         nextIndex < squares.length &&
         !squares[nextIndex].classList.contains('wall') &&
-        !squares[nextIndex].classList.contains('ghost') &&
-        !squares[nextIndex].classList.contains('pacman')
+        !squares[nextIndex].classList.contains('ghost')
       ) {
         squares[this.currentIndex].classList.remove('ghost', this.className);
         this.currentIndex = nextIndex;
         squares[this.currentIndex].classList.add('ghost', this.className);
       } else {
         direction = directions[Math.floor(Math.random() * directions.length)];
-      }
-
-      if (this.currentIndex === pacmanIndex) {
-        endGame();
       }
     }, 500);
 
@@ -393,6 +394,7 @@ function startGame() {
 
   gameRunning = true;
   canMove = true;
+  pressedKeys.clear();
   score = 0;
   scoreDisplay.textContent = `Smak: ${score}`;
   clearPickupMessage();
@@ -468,7 +470,12 @@ goAgainBtn.addEventListener('click', () => {
   restartGame();
 });
 
+const arrowKeys = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
+
 function handleKeydown(e) {
+  // Strzałki sterują grą, nie przewijają strony
+  if (arrowKeys.includes(e.key)) e.preventDefault();
+
   if (!gameRunning || !canMove || pressedKeys.has(e.key)) return;
 
   pressedKeys.add(e.key);
@@ -574,4 +581,9 @@ vanillaButton.addEventListener('click', () => {
 dlcButton.addEventListener('click', () => {
   setMode('dlc');
   restartGame();
+});
+
+// Po kliknięciu przycisk traci fokus, żeby spacja/Enter nie restartowały gry
+document.querySelectorAll('button').forEach(button => {
+  button.addEventListener('click', () => button.blur());
 });
